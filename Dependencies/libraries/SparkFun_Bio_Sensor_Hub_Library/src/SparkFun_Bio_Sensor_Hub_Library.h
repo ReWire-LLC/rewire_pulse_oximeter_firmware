@@ -45,7 +45,7 @@ struct bioData {
   uint16_t heartRate; // LSB = 0.1bpm
   uint8_t  confidence; // 0-100% LSB = 1%
   uint16_t oxygen; // 0-100% LSB = 1%
-  uint8_t  status; // 0: Success, 1: Not Ready, 2: Object Detectected, 3: Finger Detected
+  uint8_t  status; // 0: Success, 1: Not Ready, 2: Object Detected, 3: Finger Detected
   float    rValue;      // -- Algorithm Mode 2 vv
   int8_t   extStatus;   // --
   uint8_t  reserveOne;  // --

@@ -28,8 +28,8 @@
 #include <Wire.h>
 
 // Reset pin, MFIO pin
-int resPin = 4;
-int mfioPin = 13;
+int resPin = 0;
+int mfioPin = 2;
 
 // Takes address, reset pin, and MFIO pin.
 SparkFun_Bio_Sensor_Hub bioHub(resPin, mfioPin); 
@@ -53,6 +53,15 @@ void setup()
 {
     //Initialize serial communication
     Serial.begin(115200);
+    
+    //Initiate a 10-second countdown
+    for (int i = 10; i > 0; i--)
+    {
+        Serial.print("[DEBUG] ");
+        Serial.println(i);
+        delay(1000);
+    }
+    Serial.println("[DEBUG] Countdown completed...");
 
     //Initialize I2C
     Wire.begin();
@@ -93,10 +102,29 @@ void setup()
 
 void loop(){
 
-    // Information from the readBpm function will be saved to our "body"
-    // variable.  
-    body = bioHub.readBpm();
-    Serial.print("Heartrate: ");
+    // Information from the readSensorBpm function will be saved to our "body" variable.  
+    body = bioHub.readSensorBpm();
+
+    Serial.print("[DATA]\t");
+    Serial.print(body.irLed);
+    Serial.print("\t");
+    Serial.print(body.redLed);
+    Serial.print("\t");
+    Serial.print(body.heartRate); 
+    Serial.print("\t");
+    Serial.print(body.confidence); 
+    Serial.print("\t");
+    Serial.print(body.oxygen); 
+    Serial.print("\t");
+    Serial.print(body.status); 
+    Serial.println("");
+
+    /*
+    Serial.print("IR LED: ");
+    Serial.print(body.irLed);
+    Serial.print(", Red LED: ");
+    Serial.print(body.redLed);
+    Serial.print(", Heartrate: ");
     Serial.print(body.heartRate); 
     Serial.print(", Confidence: ");
     Serial.print(body.confidence); 
@@ -104,7 +132,23 @@ void loop(){
     Serial.print(body.oxygen); 
     Serial.print(", Status: ");
     Serial.print(body.status); 
+    switch (body.status)
+    {
+        case 0:
+            Serial.print(" (Success)");
+            break;
+        case 1:
+            Serial.print(" (Not Ready)");
+            break;
+        case 2:
+            Serial.print(" (Object Detected)");
+            break;
+        case 3:
+            Serial.print(" (Finger Detected)");
+            break;
+    }
     Serial.println("");
+    */
     
     // Slow it down or your heart rate will go up trying to keep up
     // with the flow of numbers
