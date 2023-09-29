@@ -3,9 +3,12 @@
 #include <ReWire_MAX32664.h>
 
 // Reset pin, MFIO pin
+// Set these to match the pin values on your board!!!
 int reset_pin = 0;
 int mfio_pin = 2;
 
+//An instance of the MAX32664. We are using the default I2C instance.
+//Change this to match the values for your board.
 ReWire_MAX32664 max32664 = ReWire_MAX32664(&Wire, mfio_pin, reset_pin);
 
 void setup()
@@ -79,44 +82,44 @@ void loop()
     //If the read was successful...
     if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
     {
-        //If the DataRdyInt bit is set...
-        //if (sensor_hub_status == 0x08)
-        if(true)
+        //Note: I am purposefully not checking "sensor_hub_status"
+        //  to see if the DataRdyBit is set, because I've found that
+        //  it doesn't really matter and just slows things down.
+        //  Proceed.
+
+        //Step 2.2: Get the number of samples in the FIFO
+        uint8_t num_available_samples;
+        read_status = max32664.ReadNumberAvailableSamples(num_available_samples);
+
+        //If the read was successful and if there are samples available to read...
+        if (read_status == MAX32664_ReadStatusByteValue::SUCCESS && num_available_samples > 0)
         {
-            //Step 2.2: Get the number of samples in the FIFO
-            uint8_t num_available_samples;
-            read_status = max32664.ReadNumberAvailableSamples(num_available_samples);
-
-            //If the read was successful and if there are samples available to read...
-            if (read_status == MAX32664_ReadStatusByteValue::SUCCESS && num_available_samples > 0)
+            //Step 2.3: Read the data stored in the FIFO
+            for (int i = 0; i < num_available_samples; i++)
             {
-                //Step 2.3: Read the data stored in the FIFO
-                for (int i = 0; i < num_available_samples; i++)
-                {
-                    MAX32664_Data current_sample;
-                    read_status = max32664.ReadSample_SensorAndAlgorithm(current_sample);
+                MAX32664_Data current_sample;
+                read_status = max32664.ReadSample_SensorAndAlgorithm(current_sample);
 
-                    //If the sample was successfully read...
-                    if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
-                    {
-                        //Output the sample data to over serial communication
-                        Serial.print(current_sample.ir);
-                        Serial.print("\t");
-                        Serial.print(current_sample.red);
-                        Serial.print("\t");
-                        Serial.print(current_sample.hr);
-                        Serial.print("\t");
-                        Serial.print(current_sample.hr_confidence);
-                        Serial.print("\t");
-                        Serial.print(current_sample.spo2);
-                        Serial.print("\t");
-                        Serial.print(current_sample.algorithm_state);
-                        Serial.print("\t");
-                        Serial.print(current_sample.algorithm_status);
-                        Serial.print("\t");
-                        Serial.print(current_sample.interbeat_interval);
-                        Serial.println("");
-                    }
+                //If the sample was successfully read...
+                if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
+                {
+                    //Output the sample data to over serial communication
+                    Serial.print(current_sample.ir);
+                    Serial.print("\t");
+                    Serial.print(current_sample.red);
+                    Serial.print("\t");
+                    Serial.print(current_sample.hr);
+                    Serial.print("\t");
+                    Serial.print(current_sample.hr_confidence);
+                    Serial.print("\t");
+                    Serial.print(current_sample.spo2);
+                    Serial.print("\t");
+                    Serial.print(current_sample.algorithm_state);
+                    Serial.print("\t");
+                    Serial.print(current_sample.algorithm_status);
+                    Serial.print("\t");
+                    Serial.print(current_sample.interbeat_interval);
+                    Serial.println("");
                 }
             }
         }
