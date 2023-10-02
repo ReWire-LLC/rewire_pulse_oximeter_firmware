@@ -14,6 +14,7 @@ void ApplicationModel::Initialize ()
     Serial.begin(115200);
     
     //Initiate a 10-second countdown
+    /*
     for (int i = 10; i > 0; i--)
     {
         Serial.print("[DEBUG] ");
@@ -21,6 +22,7 @@ void ApplicationModel::Initialize ()
         delay(1000);
     }
     Serial.println("[DEBUG] Countdown completed...");
+    */
 
     //Initialize I2C
     Serial.println("[DEBUG] Initializing I2C");
@@ -145,9 +147,21 @@ void ApplicationModel::HandleIncomingSerialMessages ()
             {
                 is_streaming_enabled = true;
             }
-            else
+            else if (cmd_parameter.startsWith("off"))
             {
                 is_streaming_enabled = false;
+            }
+            else if (cmd_parameter.startsWith("?"))
+            {
+                Serial.print("[STREAM] ");
+                if (is_streaming_enabled)
+                {
+                    Serial.println("on");
+                }
+                else
+                {
+                    Serial.println("off");
+                }
             }
         }
     }
