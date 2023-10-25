@@ -54,7 +54,7 @@ namespace ReWire_Memory
     /// </summary>
     int GetHeapSize ()
     {
-        //0x20000000 is the first memory address in SRAM on the SAMD51P19A.
+        //0x20000000 is the first memory address in SRAM on the SAMD21G18A.
         return (reinterpret_cast<int>(sbrk(0)) - 0x20000000); 
     }
 
