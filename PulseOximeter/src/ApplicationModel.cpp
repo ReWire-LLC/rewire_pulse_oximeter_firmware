@@ -3,6 +3,7 @@
 #include "ApplicationModel.h"
 #include "./utilities/ReWire_MCU_Serial_Number.h"
 #include "./utilities/SupplementalAlgorithms.h"
+#include "./utilities/ReWire_Memory.h"
 
 ApplicationModel::ApplicationModel ()
 {
@@ -105,6 +106,8 @@ void ApplicationModel::Loop ()
         Serial.print(", samples/sec = ");
         Serial.print(samples_per_second);        
         Serial.println(") ");
+
+        ReWire_Memory::PrintMemoryMessage();
 
         frame_count = 0;
         sample_count = 0;
