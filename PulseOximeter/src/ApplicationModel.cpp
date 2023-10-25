@@ -2,6 +2,7 @@
 #include <ReWire_MAX32664.h>
 #include "ApplicationModel.h"
 #include "./utilities/ReWire_MCU_Serial_Number.h"
+#include "./utilities/SupplementalAlgorithms.h"
 
 ApplicationModel::ApplicationModel ()
 {
@@ -73,17 +74,40 @@ void ApplicationModel::Loop ()
     unsigned long t = millis();
     delta_millis = t - current_millis;
     current_millis = t;
+    frame_count++;
 
     //Handle the debug pulse
     if (current_millis >= next_debug_pulse)
     {
         double elapsed_ms = current_millis - (current_millis - debug_pulse_period);
 
+        double ms_per_frame = elapsed_ms / (double) frame_count;
+        double frames_per_second = ((double)frame_count) / (elapsed_ms / 1000.0);
+
+        double ms_per_sample = 0;
+        double samples_per_second = 0;
+        if(sample_count > 0)
+        {
+            ms_per_sample = elapsed_ms / (double) sample_count;
+            samples_per_second = ((double)sample_count) / (elapsed_ms / 1000.0);
+        }
+
         next_debug_pulse = current_millis + debug_pulse_period;
         Serial.print("[DEBUG] ");
         Serial.print("Application debug pulse (millis = ");
         Serial.print(current_millis);
+        Serial.print(", ms/frame = ");
+        Serial.print(ms_per_frame);
+        Serial.print(", f/sec = ");
+        Serial.print(frames_per_second);
+        Serial.print(", ms/sample = ");
+        Serial.print(ms_per_sample);
+        Serial.print(", samples/sec = ");
+        Serial.print(samples_per_second);        
         Serial.println(") ");
+
+        frame_count = 0;
+        sample_count = 0;
     }
 
     //Handle any incoming serial messages
@@ -141,6 +165,14 @@ void ApplicationModel::HandleIncomingSerialMessages ()
             Serial.print("[SERIAL] ");
             Serial.println(serial_number);
         }
+        else if (command.startsWith("version"))
+        {
+            Serial.print("[VERSION] ");
+            Serial.print(REWIRE_PULSE_OXIMETER_VERSION_MAJOR);
+            Serial.print(".");
+            Serial.print(REWIRE_PULSE_OXIMETER_VERSION_MINOR);
+            Serial.println("");   
+        }        
         else if (command.startsWith("stream"))
         {
             if (cmd_parameter.startsWith("on"))
@@ -192,6 +224,8 @@ void ApplicationModel::StreamPulseOximeterData ()
             //If the read was successful and if there are samples available to read...
             if (read_status == MAX32664_ReadStatusByteValue::SUCCESS && num_available_samples > 0)
             {
+                sample_count += num_available_samples;
+
                 //Step 2.3: Read the data stored in the FIFO
                 for (int i = 0; i < num_available_samples; i++)
                 {
@@ -201,8 +235,23 @@ void ApplicationModel::StreamPulseOximeterData ()
                     //If the sample was successfully read...
                     if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
                     {
+                        //Pass the data into the supplemental algorithm
+                        supplemental_algorithms.AddSample(current_sample.ir);
+
+                        //Calculate perfusion index (if it is time to do so)
+                        if (current_millis >= (last_perfusion_index_calculation_millis + perfusion_index_calculation_period))
+                        {
+                            //Set the last time that PI was calculated to be the current time
+                            last_perfusion_index_calculation_millis = current_millis;
+
+                            //Calculate PI (perfusion index)
+                            current_perfusion_index = supplemental_algorithms.CalculatePerfusionIndex();
+                        }
+
                         //Output the sample data to over serial communication
                         Serial.print("[DATA]\t");
+                        Serial.print(current_millis);
+                        Serial.print("\t");
                         Serial.print(current_sample.ir);
                         Serial.print("\t");
                         Serial.print(current_sample.red);
@@ -218,6 +267,8 @@ void ApplicationModel::StreamPulseOximeterData ()
                         Serial.print(current_sample.algorithm_status);
                         Serial.print("\t");
                         Serial.print(current_sample.interbeat_interval);
+                        Serial.print("\t");
+                        Serial.print(current_perfusion_index);
                         Serial.println("");
                     }
                 }
