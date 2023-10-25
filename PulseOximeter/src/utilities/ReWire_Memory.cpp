@@ -44,7 +44,7 @@ namespace ReWire_Memory
         char top;
         int top_addr = reinterpret_cast<int>(&top);
 
-        //The SAMD21G18A contains 32 KB of RAM. 32 KB = 32768 bytes = 0x8000 bytes. Thurs 0x8000 - 1 = 0x7FFF.
+        //The SAMD21G18A contains 32 KB of RAM. 32 KB = 32768 bytes = 0x8000 bytes. Thus 0x8000 - 1 = 0x7FFF.
         //0x20007FFF is the base of the stack, and is the last memory address in SRAM on the SAMD21G18A.
         return (0x20007FFF - top_addr); 
     }

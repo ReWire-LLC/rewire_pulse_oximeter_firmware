@@ -216,64 +216,70 @@ void ApplicationModel::StreamPulseOximeterData ()
     //If the read was successful...
     if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
     {
-        //If the DataRdyInt bit is set...
-        //if (sensor_hub_status == 0x08)
-        if(true)
+        //In the datasheet, it suggests to proceed only if the DataRdyInt bit is set.
+        //In such a scenario, the "sensor_hub_status" value would be equal to 0x08.
+        //We are going to forego this suggestion by the datasheet, because I have found
+        //that it actually degrades performance of the application. From what I can tell,
+        //the value of the DataRdyInt bit will only be set if the buffer is exactly full.
+        //But it is possible for there to be data in the buffer that we could potentially
+        //read, even if the buffer is not full yet. Also, it seems that if we wait for the
+        //DataRdyInt bit to be set, sometimes when we go to fetch data we are already too
+        //late and we have missed some data. So it works better when we just read however
+        //many samples are currently available right as they become available.
+
+        //Step 2.2: Get the number of samples in the FIFO
+        uint8_t num_available_samples;
+        read_status = max32664.ReadNumberAvailableSamples(num_available_samples);
+
+        //If the read was successful and if there are samples available to read...
+        if (read_status == MAX32664_ReadStatusByteValue::SUCCESS && num_available_samples > 0)
         {
-            //Step 2.2: Get the number of samples in the FIFO
-            uint8_t num_available_samples;
-            read_status = max32664.ReadNumberAvailableSamples(num_available_samples);
+            sample_count += num_available_samples;
 
-            //If the read was successful and if there are samples available to read...
-            if (read_status == MAX32664_ReadStatusByteValue::SUCCESS && num_available_samples > 0)
+            //Step 2.3: Read the data stored in the FIFO
+            for (int i = 0; i < num_available_samples; i++)
             {
-                sample_count += num_available_samples;
+                MAX32664_Data current_sample;
+                read_status = max32664.ReadSample_SensorAndAlgorithm(current_sample);
 
-                //Step 2.3: Read the data stored in the FIFO
-                for (int i = 0; i < num_available_samples; i++)
+                //If the sample was successfully read...
+                if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
                 {
-                    MAX32664_Data current_sample;
-                    read_status = max32664.ReadSample_SensorAndAlgorithm(current_sample);
+                    //Pass the data into the supplemental algorithm
+                    supplemental_algorithms.AddSample(current_sample.ir);
 
-                    //If the sample was successfully read...
-                    if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
+                    //Calculate perfusion index (if it is time to do so)
+                    if (current_millis >= (last_perfusion_index_calculation_millis + perfusion_index_calculation_period))
                     {
-                        //Pass the data into the supplemental algorithm
-                        supplemental_algorithms.AddSample(current_sample.ir);
+                        //Set the last time that PI was calculated to be the current time
+                        last_perfusion_index_calculation_millis = current_millis;
 
-                        //Calculate perfusion index (if it is time to do so)
-                        if (current_millis >= (last_perfusion_index_calculation_millis + perfusion_index_calculation_period))
-                        {
-                            //Set the last time that PI was calculated to be the current time
-                            last_perfusion_index_calculation_millis = current_millis;
-
-                            //Calculate PI (perfusion index)
-                            current_perfusion_index = supplemental_algorithms.CalculatePerfusionIndex();
-                        }
-
-                        //Output the sample data to over serial communication
-                        Serial.print("[DATA]\t");
-                        Serial.print(current_millis);
-                        Serial.print("\t");
-                        Serial.print(current_sample.ir);
-                        Serial.print("\t");
-                        Serial.print(current_sample.red);
-                        Serial.print("\t");
-                        Serial.print(current_sample.hr);
-                        Serial.print("\t");
-                        Serial.print(current_sample.hr_confidence);
-                        Serial.print("\t");
-                        Serial.print(current_sample.spo2);
-                        Serial.print("\t");
-                        Serial.print(current_sample.algorithm_state);
-                        Serial.print("\t");
-                        Serial.print(current_sample.algorithm_status);
-                        Serial.print("\t");
-                        Serial.print(current_sample.interbeat_interval);
-                        Serial.print("\t");
-                        Serial.print(current_perfusion_index);
-                        Serial.println("");
+                        //Calculate PI (perfusion index)
+                        current_perfusion_index = supplemental_algorithms.CalculatePerfusionIndex();
                     }
+
+                    //Output the sample data to over serial communication
+                    Serial.print("[DATA]\t");
+                    Serial.print(current_millis);
+                    Serial.print("\t");
+                    Serial.print(current_sample.ir);
+                    Serial.print("\t");
+                    Serial.print(current_sample.red);
+                    Serial.print("\t");
+                    Serial.print(current_sample.hr);
+                    Serial.print("\t");
+                    Serial.print(current_sample.hr_confidence);
+                    Serial.print("\t");
+                    Serial.print(current_sample.spo2);
+                    Serial.print("\t");
+                    Serial.print(current_sample.algorithm_state);
+                    Serial.print("\t");
+                    Serial.print(current_sample.algorithm_status);
+                    Serial.print("\t");
+                    Serial.print(current_sample.interbeat_interval);
+                    Serial.print("\t");
+                    Serial.print(current_perfusion_index);
+                    Serial.println("");
                 }
             }
         }
