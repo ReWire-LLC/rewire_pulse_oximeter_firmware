@@ -222,7 +222,7 @@ float SupplementalAlgorithms::CalculatePerfusionIndex ()
     float pi = 0;
     if (dc_component != 0)
     {
-        pi = (ac_component / dc_component) * 100.0f;    
+        pi = abs((ac_component / dc_component) * 100.0f);    
     }
     
     return pi;
