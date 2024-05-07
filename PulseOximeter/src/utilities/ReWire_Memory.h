@@ -1,5 +1,5 @@
-#ifndef __HABITRAK_MEMORY_H
-#define __HABITRAK_MEMORY_H
+#ifndef __REWIRE_MEMORY_H
+#define __REWIRE_MEMORY_H
 
 #include <Arduino.h>
 
@@ -51,4 +51,4 @@ namespace ReWire_Memory
     void PrintMemoryMessage(bool end_with_newline = true);
 }
 
-#endif /* __HABITRAK_MEMORY_H */
+#endif /* __REWIRE_MEMORY_H */
