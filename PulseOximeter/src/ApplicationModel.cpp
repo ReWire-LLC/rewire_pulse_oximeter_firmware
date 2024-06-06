@@ -246,7 +246,7 @@ void ApplicationModel::StreamPulseOximeterData ()
                 if (read_status == MAX32664_ReadStatusByteValue::SUCCESS)
                 {
                     //Pass the data into the supplemental algorithm
-                    supplemental_algorithms.AddSample(current_sample.ir);
+                    supplemental_algorithms.AddSample(current_sample.ir, current_sample.red);
 
                     //Calculate perfusion index (if it is time to do so)
                     if (current_millis >= (last_perfusion_index_calculation_millis + perfusion_index_calculation_period))
@@ -256,6 +256,12 @@ void ApplicationModel::StreamPulseOximeterData ()
 
                         //Calculate PI (perfusion index)
                         current_perfusion_index = supplemental_algorithms.CalculatePerfusionIndex();
+
+                        //Calculate beats per minute (heart rate)
+                        current_bpm = supplemental_algorithms.CalculateBeatsPerMinute();
+
+                        //Calculate the spo2
+                        current_spo2 = supplemental_algorithms.CalculateSpO2();
                     }
 
                     //Output the sample data to over serial communication
@@ -279,6 +285,10 @@ void ApplicationModel::StreamPulseOximeterData ()
                     Serial.print(current_sample.interbeat_interval);
                     Serial.print("\t");
                     Serial.print(current_perfusion_index);
+                    Serial.print("\t");
+                    Serial.print(current_bpm);
+                    Serial.print("\t");
+                    Serial.print(current_spo2);                    
                     Serial.println("");
                 }
             }

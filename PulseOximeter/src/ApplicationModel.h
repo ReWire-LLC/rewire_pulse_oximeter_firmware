@@ -6,7 +6,7 @@
 #include <ReWire_MAX32664.h>
 
 #define REWIRE_PULSE_OXIMETER_VERSION_MAJOR         1
-#define REWIRE_PULSE_OXIMETER_VERSION_MINOR         1
+#define REWIRE_PULSE_OXIMETER_VERSION_MINOR         2
 
 class ApplicationModel
 {
@@ -33,6 +33,8 @@ class ApplicationModel
 
         //Variables related to perfusion index
         float current_perfusion_index = 0;
+        float current_bpm = 0;
+        float current_spo2 = 0;
         unsigned long last_perfusion_index_calculation_millis = 0;
         unsigned long perfusion_index_calculation_period = 1000;  
 
