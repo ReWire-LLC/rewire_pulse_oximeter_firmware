@@ -1,0 +1,3 @@
+[submodule "Dependencies/libraries/rewire_max32664"]
+	path = Dependencies/libraries/rewire_max32664
+	url = https://github.com/ReWire-LLC/rewire_max32664.git
