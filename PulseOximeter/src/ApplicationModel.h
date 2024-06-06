@@ -6,7 +6,7 @@
 #include <ReWire_MAX32664.h>
 
 #define REWIRE_PULSE_OXIMETER_VERSION_MAJOR         1
-#define REWIRE_PULSE_OXIMETER_VERSION_MINOR         1
+#define REWIRE_PULSE_OXIMETER_VERSION_MINOR         2
 
 class ApplicationModel
 {

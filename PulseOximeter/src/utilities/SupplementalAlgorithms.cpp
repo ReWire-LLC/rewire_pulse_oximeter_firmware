@@ -4,8 +4,10 @@
 
 SupplementalAlgorithms::SupplementalAlgorithms()
 {
-    recent_ir_signal_stats[0].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
-    recent_ir_signal_stats[1].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
+    recent_ir_signal_mean_stats[0].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
+    recent_ir_signal_mean_stats[1].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
+    recent_ir_signal_min_max_stats[0].SetCalculationType(ReWire_CalculationType::Calculation_Min);
+    recent_ir_signal_min_max_stats[1].SetCalculationType(ReWire_CalculationType::Calculation_Min);
     recent_ir_peaks_stats[0].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
     recent_ir_peaks_stats[1].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
     recent_ir_troughs_stats[0].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
@@ -22,15 +24,39 @@ SupplementalAlgorithms::SupplementalAlgorithms()
     recent_red_mean_stats[1].SetCalculationType(ReWire_CalculationType::Calculation_Mean);
 }
 
+float SupplementalAlgorithms::get_current_min ()
+{
+    if (current_signal_position < REWIRE_SUPP_ALGO_SIGNAL_LENGTH_HALF)
+    {
+        return recent_ir_signal_min_max_stats[0].GetCurrentValue();
+    }
+    else
+    {
+        return recent_ir_signal_min_max_stats[1].GetCurrentValue();
+    }
+}
+
+float SupplementalAlgorithms::get_current_max ()
+{
+    if (current_signal_position < REWIRE_SUPP_ALGO_SIGNAL_LENGTH_HALF)
+    {
+        return recent_ir_signal_min_max_stats[0].GetCurrentValue(ReWire_CalculationType::Calculation_Max);
+    }
+    else
+    {
+        return recent_ir_signal_min_max_stats[1].GetCurrentValue(ReWire_CalculationType::Calculation_Max);
+    }
+}
+
 float SupplementalAlgorithms::get_current_mean ()
 {
     if (current_signal_position < REWIRE_SUPP_ALGO_SIGNAL_LENGTH_HALF)
     {
-        return recent_ir_signal_stats[0].GetCurrentValue();
+        return recent_ir_signal_mean_stats[0].GetCurrentValue();
     }
     else
     {
-        return recent_ir_signal_stats[1].GetCurrentValue();
+        return recent_ir_signal_mean_stats[1].GetCurrentValue();
     }
 }
 
@@ -38,11 +64,11 @@ float SupplementalAlgorithms::get_current_stddev ()
 {
     if (current_signal_position < REWIRE_SUPP_ALGO_SIGNAL_LENGTH_HALF)
     {
-        return recent_ir_signal_stats[0].GetCurrentValue(ReWire_CalculationType::Calculation_StdDev);
+        return recent_ir_signal_mean_stats[0].GetCurrentValue(ReWire_CalculationType::Calculation_StdDev);
     }
     else
     {
-        return recent_ir_signal_stats[1].GetCurrentValue(ReWire_CalculationType::Calculation_StdDev);
+        return recent_ir_signal_mean_stats[1].GetCurrentValue(ReWire_CalculationType::Calculation_StdDev);
     }
 }
 
@@ -257,8 +283,10 @@ void SupplementalAlgorithms::AddSample (uint32_t ir_sample, uint32_t red_sample)
     recent_ir_signal[current_signal_position] = ir_sample;
     
     //Update our calculations for mean and standard deviation of the recent signal
-    recent_ir_signal_stats[0].UpdateCalculation(ir_sample);
-    recent_ir_signal_stats[1].UpdateCalculation(ir_sample);
+    recent_ir_signal_mean_stats[0].UpdateCalculation(ir_sample);
+    recent_ir_signal_mean_stats[1].UpdateCalculation(ir_sample);
+    recent_ir_signal_min_max_stats[0].UpdateCalculation(ir_sample);
+    recent_ir_signal_min_max_stats[1].UpdateCalculation(ir_sample);
 
     //Update the "recent_ir_signal_mean" ring-buffer
     recent_ir_signal_mean[current_signal_position] = get_current_mean();
@@ -279,7 +307,8 @@ void SupplementalAlgorithms::AddSample (uint32_t ir_sample, uint32_t red_sample)
     if (current_signal_position >= REWIRE_SUPP_ALGO_SIGNAL_LENGTH)
     {
         current_signal_position = 0;
-        recent_ir_signal_stats[1].ResetCalculation();
+        recent_ir_signal_mean_stats[1].ResetCalculation();
+        recent_ir_signal_min_max_stats[1].ResetCalculation();
 
         recent_red_maximum_stats[1].ResetCalculation();
         recent_red_minimum_stats[1].ResetCalculation();
@@ -287,12 +316,33 @@ void SupplementalAlgorithms::AddSample (uint32_t ir_sample, uint32_t red_sample)
     }
     else if (current_signal_position == REWIRE_SUPP_ALGO_SIGNAL_LENGTH_HALF)
     {
-        recent_ir_signal_stats[0].ResetCalculation();
+        recent_ir_signal_mean_stats[0].ResetCalculation();
+        recent_ir_signal_min_max_stats[0].ResetCalculation();
 
         recent_red_maximum_stats[0].ResetCalculation();
         recent_red_minimum_stats[0].ResetCalculation();
         recent_red_mean_stats[0].ResetCalculation();        
     }
+
+    //Debug output
+    /*
+    Serial.print(ir_sample);
+    Serial.print(" ");
+    Serial.print(red_sample);
+    Serial.print(" ");
+    Serial.print(get_current_mean());
+    Serial.print(" ");
+    Serial.print(get_current_max());
+    Serial.print(" ");
+    Serial.print(get_current_min());
+    Serial.print(" ");
+    Serial.print(get_current_red_mean());
+    Serial.print(" ");
+    Serial.print(get_current_red_max());
+    Serial.print(" ");
+    Serial.print(get_current_red_min());
+    Serial.println("");
+    */
 }
 
 float SupplementalAlgorithms::CalculatePerfusionIndex ()
@@ -304,7 +354,7 @@ float SupplementalAlgorithms::CalculatePerfusionIndex ()
     //4. https://www.ti.com/lit/an/slaa655/slaa655.pdf
 
     float dc_component = get_current_mean();
-    float ac_component = get_current_peak_mean() - get_current_trough_mean();
+    float ac_component = get_current_max() - get_current_min();
     float pi = 0;
     if (dc_component != 0)
     {
@@ -334,28 +384,71 @@ float SupplementalAlgorithms::CalculateBeatsPerMinute ()
 
 float SupplementalAlgorithms::CalculateSpO2 ()
 {
-    //SpO2 (blood-oxygen concentration) is calculated as:
+    // SpO2 (blood-oxygen concentration) is calculated as:
+    //
     //  SpO2 = aR^2 + bR + c
+    //
+    // The default values for a, b, and c as defined in the Maxim documentation for the MAX30101 are:
     //  
     //  a = 1.5958422
     //  b = -34.6596622
     //  c = 112.6898759
     //
+    // However, the SparkFun library uses the following values for a, b and c:
+    //
+    //  a = -45.060
+    //  b = 30.354
+    //  c = 94.845
+    //
+    // The Maxim documentation states that their default values were "without the optical shield", but the
+    // MAX30101 contains an optical shield on it. I don't know if that optical shield affects the calibration values
+    // at all.
+    //
+    // Anyway, after some testing, it seems like the SparkFun values work well, so I have chosen to use those values
+    // for the time being. These values can be revisited in the future if it is necessary to do so.
+    //
+    // The value for R is calculated as follows:
+    //
     //  R = (AC_red / DC_red) / (AC_ir / DC_ir)
+    //
+    //  The above equation for R can be re-written as the following:
+    //
+    //  R = (AC_red * DC_ir) / (AC_ir * DC_red)
+    //
+    //  Re-writing the equation like so eliminates some of the division operations, which could speed up the computation.
     //
     //See the following article:
     //  https://www.analog.com/en/technical-articles/guidelines-for-spo2-measurement--maxim-integrated.html
 
     float DC_ir = get_current_mean();
-    float AC_ir = get_current_peak_mean() - get_current_trough_mean();
+    float AC_ir = get_current_max() - get_current_min();
     float DC_red = get_current_red_mean();
     float AC_red = get_current_red_max() - get_current_red_min();
 
     if (DC_red > 0 && DC_ir > 0)
     {
-        float R = abs(AC_red / DC_red) / abs(AC_ir / DC_ir);
+        float R = (AC_red * DC_ir) / (AC_ir * DC_red);
         float SpO2 = (REWIRE_SUPP_ALGO_CONST_A * pow(R, 2)) + (REWIRE_SUPP_ALGO_CONST_B * R) + REWIRE_SUPP_ALGO_CONST_C;
-        return round(SpO2);
+
+        //Debug output
+        /*
+        Serial.print("DC_ir = ");
+        Serial.print(DC_ir);
+        Serial.print(", AC_ir = ");
+        Serial.print(AC_ir);
+        Serial.print(", DC_red = ");
+        Serial.print(DC_red);
+        Serial.print(", AC_red = ");
+        Serial.print(AC_red);
+        Serial.print(", AC_red / DC_red = ");
+        Serial.print(AC_red / DC_red);
+        Serial.print(", AC_ir / DC_ir = ");
+        Serial.print(AC_ir / DC_ir);
+        Serial.print(", R = ");
+        Serial.println(R);
+        */
+
+        return SpO2;
     }
     else
     {

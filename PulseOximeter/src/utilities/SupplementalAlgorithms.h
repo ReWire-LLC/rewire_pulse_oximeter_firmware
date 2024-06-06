@@ -10,9 +10,9 @@
 #define REWIRE_SUPP_ALGO_PEAKS_LENGTH_HALF          32
 
 #define REWIRE_SUPP_ALGO_SAMPLING_RATE_FLOAT        100.0f
-#define REWIRE_SUPP_ALGO_CONST_A                    1.5958422f
-#define REWIRE_SUPP_ALGO_CONST_B                    -34.6596622f
-#define REWIRE_SUPP_ALGO_CONST_C                    112.6898759f
+#define REWIRE_SUPP_ALGO_CONST_A                    -45.060f
+#define REWIRE_SUPP_ALGO_CONST_B                    30.354f
+#define REWIRE_SUPP_ALGO_CONST_C                    94.845f
 
 class SupplementalAlgorithms
 {
@@ -27,6 +27,8 @@ class SupplementalAlgorithms
 
     private:
 
+        float get_current_min ();
+        float get_current_max ();
         float get_current_mean ();
         float get_current_stddev ();
         void update_peaks_and_troughs (uint32_t sample);
@@ -52,7 +54,8 @@ class SupplementalAlgorithms
         uint32_t current_peaks_position = 0;
         uint32_t current_troughs_position = 0;
 
-        ReWire_OnlineCalculator recent_ir_signal_stats[2];
+        ReWire_OnlineCalculator recent_ir_signal_mean_stats[2];
+        ReWire_OnlineCalculator recent_ir_signal_min_max_stats[2];
         ReWire_OnlineCalculator recent_ir_peaks_stats[2];
         ReWire_OnlineCalculator recent_ir_troughs_stats[2];
 
